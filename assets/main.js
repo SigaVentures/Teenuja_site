@@ -246,27 +246,55 @@
     return GALLERY.some(function (c) { return c.slug === s; });
   }
 
+  /* Arriving from another page's category link, the grid filters itself but the
+     page would otherwise open at the hero, with the filtered photographs out of
+     sight — there is no element with the slug's id to scroll to. */
   function fromHash() {
     var h = location.hash.replace("#", "");
-    select(isSlug(h) ? h : "all");
+    var known = isSlug(h);
+    select(known ? h : "all");
+    if (known) scrollToGrid();
   }
 
   fromHash();
 
-  /* On this page the category cards are same-page links, so the browser changes
-     the hash without reloading — filter the grid and scroll down to it. */
-  if (cardHost) {
-    cardHost.addEventListener("click", function (e) {
-      var card = e.target.closest(".card");
-      if (!card) return;
-      var slug = card.getAttribute("href").split("#")[1];
-      if (!isSlug(slug)) return;
-      e.preventDefault();
-      select(slug);
-      history.replaceState(null, "", "#" + slug);
-      var target = document.getElementById("all") || grid;
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+  /* Every category link on this page — the cards and the footer list — points at
+     portfolio.html#slug, which is this same document. The browser would only
+     change the hash and leave the page sitting where it is, so handle them here:
+     filter the grid and scroll to it. Links on the other pages navigate as usual
+     and are picked up by fromHash() once this page loads. */
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest("a[href*='#']");
+    if (!a) return;
+    var parts = a.getAttribute("href").split("#");
+    if (!isSlug(parts[1])) return;
+    // same document? (an empty path means a bare "#slug" link)
+    if (parts[0] && parts[0] !== location.pathname.split("/").pop()) return;
+    e.preventDefault();
+    select(parts[1]);
+    history.replaceState(null, "", "#" + parts[1]);
+    scrollToGrid();
+  });
+
+  /* The grid changes height the moment it is filtered, and a smooth scroll that
+     starts while the page is still settling gets cancelled part-way — leaving
+     the visitor where they clicked, as though the link had done nothing. So land
+     on the grid outright, and re-assert it once the new rows have settled. */
+  function scrollToGrid() {
+    var target = document.getElementById("all") || grid;
+    var html = document.documentElement;
+
+    function jump() {
+      var prev = html.style.scrollBehavior;
+      html.style.scrollBehavior = "auto";
+      window.scrollTo(0, target.getBoundingClientRect().top + window.pageYOffset);
+      html.style.scrollBehavior = prev;
+    }
+
+    jump();
+    setTimeout(function () {
+      if (Math.abs(target.getBoundingClientRect().top) > 4) jump();
+    }, 250);
   }
 
   window.addEventListener("hashchange", fromHash);

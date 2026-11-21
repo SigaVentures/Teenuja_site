@@ -74,7 +74,7 @@ Asset URLs carry a `?v=` version string. Bump it whenever you edit the CSS or JS
 or returning visitors will keep the cached copies:
 
 ```bash
-cd site && V=$(date +%Y%m%d%H%M%S) && sed -i '' -E "s|(assets/(style\.css|gallery\.js|main\.js))\?v=[0-9]+|\1?v=$V|g" *.html
+cd site && V=$(date +%Y%m%d%H%M%S) && sed -i '' -E "s#(assets/(style\.css|gallery\.js|main\.js))\?v=[0-9]+#\1?v=$V#g" *.html
 ```
 
 ## Notes
